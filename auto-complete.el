@@ -1714,6 +1714,23 @@ completion menu. This workaround stops that annoying behavior."
       (with-current-buffer buffer
         (ac-update-word-index-1)))))
 
+(defun ac-words-sync-case (string)
+  "Convert STRING by `capitalize'/`upcase'/`downcase' according to `ac-prefix'."
+  (let ((case-fold-search nil))
+    (cond
+     ((or (not ac-ignore-case)
+	  (eq ac-ignore-case 'smart)
+	  (eq (compare-strings string 0 (length ac-prefix) ac-prefix 0 nil) t))
+      string)
+     ((string-match "^[A-Z][^A-Z]*$" ac-prefix)
+      (capitalize string))
+     ((string-match "^[^A-Z]+$" ac-prefix)
+      (downcase string))
+     ((string-match "^[^a-z]+$" ac-prefix)
+      (upcase string))
+     (t
+      (concat ac-prefix (substring string (length ac-prefix)))))))
+
 (defun ac-word-candidates (&optional buffer-pred)
   (loop initially (unless ac-fuzzy-enable (ac-incremental-update-word-index))
         for buffer in (buffer-list)
@@ -1724,7 +1741,7 @@ completion menu. This workaround stops that annoying behavior."
                         (and (local-variable-p 'ac-word-index buffer)
                              (cdr (buffer-local-value 'ac-word-index buffer))))
         into candidates
-        finally return candidates))
+        finally return (mapcar 'ac-words-sync-case candidates)))
 
 (ac-define-source words-in-buffer
   '((candidates . ac-word-candidates)))
